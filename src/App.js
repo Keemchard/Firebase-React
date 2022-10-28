@@ -1,23 +1,41 @@
-import logo from './logo.svg';
-import './App.css';
+import logo from "./logo.svg";
+import "./App.css";
+
+import { collection, addDoc, where, query, getDocs } from "firebase/firestore";
+import { db, provider, auth } from "./firebase-config/firebase";
+import { useState } from "react";
+import WelcomePage from "./components/WelcomePage";
 
 function App() {
+  const [name, setName] = useState("");
+
+  const signInWithGoogle = async () => {
+    try {
+      const res = await auth.signInWithPopup(provider);
+      const user = res.user;
+      const userRef = collection(db, "users");
+      const result = await getDocs(
+        query(userRef, where("uid", "==", user.uid))
+      );
+      if (result.empty) {
+        await addDoc(collection(db, "users"), {
+          uid: user.uid,
+          name: user.displayName,
+          authProvider: "google",
+          email: user.email,
+        });
+
+        setName(user.displayName);
+      }
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
   return (
     <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+      <button onClick={signInWithGoogle}>Sign-in with google</button>
+      {name !== "" && <WelcomePage user={name} />}
     </div>
   );
 }
